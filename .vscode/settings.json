@@ -1,0 +1,80 @@
+{
+    "[python]": {
+      "editor.formatOnType": true,
+      "editor.defaultFormatter": "ms-python.black-formatter"
+    },
+    "workbench.iconTheme": "vscode-icons",
+    "editor.rulers": [
+      {
+        "column": 79
+      }
+    ],
+    "workbench.colorCustomizations": {},
+    "python.formatting.blackArgs": ["--line-length", "79"],
+    "python.formatting.provider": "black",
+    "git.confirmSync": false,
+  
+    "vsicons.dontShowNewVersionMessage": true,
+    "aws.suppressPrompts": {
+      "codeWhispererConnectionExpired": true
+    },
+    "files.autoSave": "afterDelay",
+    "[jsonc]": {
+      "editor.defaultFormatter": "esbenp.prettier-vscode"
+    },
+    "chatgpt.lang": "en",
+    "[html]": {
+      "editor.defaultFormatter": "esbenp.prettier-vscode"
+    },
+    "[javascript]": {
+      "editor.defaultFormatter": "vscode.typescript-language-features"
+    },
+    "batch-runner.cmdPath": "/usr/bin/bash",
+    "[css]": {
+      "editor.defaultFormatter": "esbenp.prettier-vscode"
+    },
+    "window.zoomLevel": 0.5,
+    "[yaml]": {
+      "editor.defaultFormatter": "redhat.vscode-yaml"
+    },
+    "[dart]": {
+      "editor.formatOnSave": true,
+      "editor.formatOnType": true,
+      "editor.rulers": [
+        80
+      ],
+      "editor.selectionHighlight": false,
+      "editor.suggestSelection": "first",
+      "editor.tabCompletion": "onlySnippets",
+      "editor.wordBasedSuggestions": "off"
+    },
+    "gitlens.views.showRelativeDateMarkers": false,
+    "dart.debugExternalPackageLibraries": true,
+    "dart.debugSdkLibraries": false,
+    "[json]": {
+      "editor.defaultFormatter": "esbenp.prettier-vscode"
+    },
+    "editor.unicodeHighlight.ambiguousCharacters": false,
+    "editor.largeFileOptimizations": false,
+    "explorer.compactFolders": false,
+    "explorer.fileNesting.patterns": {
+      "pubspec.yaml": "pubspec.lock,pubspec_overrides.yaml,.packages,.flutter-plugins,.flutter-plugins-dependencies,.metadata",
+      "*.dart": "${capture}.g.dart",
+      "*.sqlite": "${capture}.${extname}-*",
+      "*.db": "${capture}.${extname}-*",
+      "*.sqlite3": "${capture}.${extname}-*",
+      "*.db3": "${capture}.${extname}-*",
+      "*.sdb": "${capture}.${extname}-*",
+      "*.s3db": "${capture}.${extname}-*"
+    },
+    "liveServer.settings.donotShowInfoMsg": true,
+    "json.schemas": [
+      
+    ],
+    "editor.minimap.size": "fill",
+    "editor.minimap.renderCharacters": false,
+    "editor.stickyScroll.enabled": false,
+    "explorer.confirmDelete": false,
+    "editor.minimap.enabled": false
+  }
+  
