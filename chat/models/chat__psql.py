@@ -4,7 +4,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy import String, ForeignKey, Enum, Integer,event
 from enum import Enum
 from sqlalchemy import Enum as SQLEnum
-# from user.models import User
+from user.models import User
 
 class ChatTypeChoices(Enum):
     CHAT = 0
@@ -43,16 +43,16 @@ class Member(Base):
         Integer, ForeignKey("chats.id", ondelete="CASCADE"), nullable=False
     )
     chat : Mapped["Chat"] = relationship("Chat",back_populates="members")
-    user_id : Mapped["User"]=mapped_column(
+    user_id : Mapped[int]=mapped_column(
         Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False
     )
    
-    user : Mapped["User"] = relationship("User",back_populates="members",lazy="selectin")
+    user: Mapped[User] = relationship("User", back_populates="members")
 
     def __repr__(self):
         return f"Chat id : {self.chat_id}"
     
-
+User.members = relationship("Member", back_populates="user", cascade="all, delete-orphan")
 
 
 class Message(TimeStampModel):

@@ -1,0 +1,30 @@
+# import os
+# import smtplib
+# from dotenv import load_dotenv
+# from email.mime.text import MIMEText
+# from email.mime.multipart import MIMEMultipart
+
+# load_dotenv()
+
+# async def send_error_email(subject: str, body: str):
+#     sender = os.getenv("SMTP_USER")
+#     recipient = os.getenv("DEV_EMAIL")
+#     smtp_host = os.getenv("SMTP_HOST")
+#     smtp_host = os.getenv("SMTP_HOST")
+#     smtp_port = int(os.getenv("SMTP_PORT"))
+#     smtp_pass = os.getenv("SMTP_PASS")
+
+#     msg = MIMEMultipart()
+#     msg["From"] = sender
+#     msg["To"] = recipient
+#     msg["Subject"] = subject
+
+#     msg.attach(MIMEText(body, 'html'))
+
+#     try:
+#         with smtplib.SMTP(smtp_host, smtp_port) as server:
+#             server.starttls()
+#             server.login(sender, smtp_pass)
+#             server.send_message(msg)
+#     except Exception as e:
+#         print(f"Failed to send the email: {e}")

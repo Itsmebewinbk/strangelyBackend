@@ -4,17 +4,18 @@ from user.urls import router as urls_router
 from chat.urls import router as chat_router
 from ws.urls import router as ws_router
 from sqladmin import Admin
-from user.admin import UserAdmin
+from user.admin import UserAdmin, AdminAuth
 from db import sync_engine, redis_client
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from response import ErrorResponse
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, WebSocket,WebSocketDisconnect
+from ws.chat import WebSocketManager
+from starlette.middleware.sessions import SessionMiddleware
 
 
-import uuid, json, logging
-import asyncio
+import logging
 
 logger = logging.getLogger(__name__)
 app = FastAPI()
@@ -23,10 +24,44 @@ app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=True,
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# @app.middleware("http")
+# async def catch_server_errors(request: Request, call_next):
+#     response = await call_next(request)
+
+#     if response.status_code >= 500:
+#         log_data={
+#             "request_method": request.method,
+#             "user_id" : getattr(request.state, "user_id", None),
+#             "url": request.url,
+#             "status_code" : response.status_code
+#         }
+#         error_logger.error(log_data)
+
+#         #sending the email...
+#         subject = f"{os.getenv('APP_NAME')} - SERVER ERROR {log_data['status_code']}"
+#         body = f"""
+#         <html>
+#           <body>
+#             <h2>Server Error: 500</h2>
+#             <p><strong>Method:</strong> {request.method}</p>
+#             <p><strong>URL:</strong> {request.url}</p>
+#             <p><strong>User ID:</strong> {getattr(request.state, 'user_id', None)}</p>
+#             <p><strong>Status Code:</strong> {response.status_code}</p>
+#             <hr>
+#             <p style="font-size: 12px; color: gray;">Please check the server_errors.log.</p>
+#           </body>
+#         </html>
+#         """
+#         await send_error_email(subject, body)
+#     return response
+
+SECRET_KEY = "QDNWEJRNGERTIY3MRYT"
+app.add_middleware(SessionMiddleware, secret_key=SECRET_KEY)
 
 
 @app.exception_handler(404)
@@ -61,8 +96,14 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
     return ErrorResponse(message=message)
 
 
-# admin
-admin = Admin(app, sync_engine, base_url="/admin", title="CHat App")
+
+
+admin = Admin(
+    app,
+    sync_engine,
+    authentication_backend=AdminAuth(secret_key=SECRET_KEY),
+    title="Strangely",
+)
 admin.add_view(UserAdmin)
 
 # api/v1/
@@ -70,39 +111,44 @@ app.include_router(urls_router, prefix="/api/v1/users")
 app.include_router(chat_router, prefix="/api/v1/chats")
 
 
-# manager = ConnectionManager()
-# @app.websocket("/ws/chats/")
-# async def websocket_endpoint(websocket: WebSocket):
-#     await websocket.accept()
-#     conn_id = str(uuid.uuid4())
-#     WebSocketConnectionHolder.add(conn_id, websocket)
-
-#     try:
-#         while True:
-#             data = await websocket.receive_json()
-#             room_id = data.get("room_id")
-#             command = data.get("command")
-
-#             if command == "join_room":
-#                 await manager.connect(room_id, conn_id)
-#                 if not RedisSubscriptionTracker.is_subscribed(room_id):
-#                     RedisSubscriptionTracker.mark_subscribed(room_id)
-#                     asyncio.create_task(subscribe_to_channel(room_id))
-#                 print(f"WebSocket {conn_id} joined room {room_id}")
-
-#             elif command == "send_message":
-#                 message = {
-#                     "conn_id": conn_id,
-#                     "message": data.get("message"),
-#                 }
-#                 await redis_client.publish(f"chat:{room_id}", json.dumps(message))
-#                 print(f"Published message to chat:{room_id}")
-
-#     except WebSocketDisconnect:
-#         WebSocketConnectionHolder.remove(conn_id)
-#         print(f"WebSocket {conn_id} disconnected")
-
-
 @app.get("/")
 async def read_root():
     return {"message": "Hello, FastAPI!"}
+
+
+ws_manager = WebSocketManager()
+
+@app.websocket("/ws/chats")
+async def websocket_connect(websocket: WebSocket):
+    print(8222222222222222222222222222233333)
+    await websocket.accept()
+    room_id = None
+
+    try:
+        while True:
+            data = await websocket.receive_json()
+            command = data.get("command")
+
+            if command == "join_room":
+                room_id = data.get("room_id")
+                sender_id = data.get("sender_id")
+                if room_id is None:
+                    await websocket.send_json({"error": "room_id required"})
+                    continue
+                print(999999999999999999999999999999)
+                await ws_manager.add_user_to_room(room_id,sender_id, websocket)
+
+            elif command == "send_message":
+                if room_id is None:
+                    await websocket.send_json({"error": "You must join a room first"})
+                    continue
+                message = data.get("message")
+                if message:
+                    await ws_manager.broadcast_to_room(room_id, data)
+
+            else:
+                await websocket.send_json({"error": "Invalid command"})
+
+    except WebSocketDisconnect:
+        print(f"WebSocket disconnected from room {room_id}")
+        await ws_manager.remove_user_from_room(room_id, websocket)

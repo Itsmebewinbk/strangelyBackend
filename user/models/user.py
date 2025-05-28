@@ -63,6 +63,7 @@ class User(TimeStampModel):
         index=True,
         nullable=False,
     )
+    is_superuser : Mapped[bool] = mapped_column(Boolean,default=False)
     password: Mapped[str] = mapped_column(String, nullable=False)
 
     # One-to-One relationship
@@ -86,7 +87,11 @@ class User(TimeStampModel):
         passive_deletes=True,
     )
 
-    members: Mapped[list["Member"]] = relationship("Member", back_populates="user",lazy="selectin")
+    # members: Mapped[list["Member"]] = relationship(
+    #     "Member", back_populates="user", cascade="all, delete-orphan"
+    # )
+
+
 
     def set_password(self, password: str):
         if password:
@@ -98,7 +103,7 @@ class User(TimeStampModel):
         return pwd_context.verify(password, self.password)
 
     def __repr__(self):
-        return f"User(name={self.first_name})"
+        return f"User(id={self.id}, email={self.email}, name={self.first_name})"
 
 
 # (One-to-One with User)

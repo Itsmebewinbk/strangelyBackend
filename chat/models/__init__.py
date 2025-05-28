@@ -1,3 +1,3 @@
-# from .chat__psql import *
+from .chat__psql import *
 
 

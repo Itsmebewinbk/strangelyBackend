@@ -1,6 +1,7 @@
 
 import redis.asyncio as redis
 import redis.asyncio as aioredis
+import json
 
 REDIS_URL = "redis://localhost:6379"
 async def get_redis_connection():
@@ -10,11 +11,6 @@ async def get_redis_connection():
 
 redis_client = redis.from_url("redis://localhost:6379")
 
-import asyncio
-
-
-import json
-from fastapi import WebSocket
 
 
 class RedisPubSubManager:
@@ -62,7 +58,7 @@ class RedisPubSubManager:
             room_id (str): Channel or room ID.
             message (str): Message to be published.
         """
-        await self.redis_connection.publish(room_id, message)
+        await self.redis_connection.publish(room_id,  json.dumps(message))
 
     async def subscribe(self, room_id: str) -> aioredis.Redis:
         """
