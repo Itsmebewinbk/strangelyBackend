@@ -64,6 +64,7 @@ class User(TimeStampModel):
         nullable=False,
     )
     is_superuser : Mapped[bool] = mapped_column(Boolean,default=False)
+    is_registered : Mapped[bool] = mapped_column(Boolean,default=False)
     password: Mapped[str] = mapped_column(String, nullable=False)
 
     # One-to-One relationship
@@ -78,6 +79,7 @@ class User(TimeStampModel):
     addresses: Mapped[list["Address"]] = relationship(
         "Address", back_populates="user", passive_deletes=True
     )
+    
 
     # Many-to-Many relationship
     roles: Mapped[list["Role"]] = relationship(
