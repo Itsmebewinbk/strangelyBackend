@@ -1,4 +1,4 @@
-# Project Makefile for FastAPI ToDo App
+
 
 APP_NAME=main
 VENV=.venv
