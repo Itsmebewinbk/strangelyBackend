@@ -97,23 +97,23 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
 
 
 
-#sql_admin
+# sql_admin
 
 
-# admin = Admin(
-#     app,
-#     sync_engine,
-#     authentication_backend=AdminAuth(secret_key=SECRET_KEY),
-#     title="Strangely",
-# )
-# admin.add_view(UserAdmin)
+admin = Admin(
+    app,
+    sync_engine,
+    authentication_backend=AdminAuth(secret_key=SECRET_KEY),
+    title="Strangely",
+)
+admin.add_view(UserAdmin)
 
-
-# @app.websocket("/ws/chats")
-# async def websocket_connect(websocket: WebSocket):
+#websocket
+@app.websocket("/ws/chats")
+async def websocket_connect(websocket: WebSocket):
  
-#     await websocket.accept()
-#     await handle_websocket_messages(websocket)
+    await websocket.accept()
+    await handle_websocket_messages(websocket)
     
 
 
