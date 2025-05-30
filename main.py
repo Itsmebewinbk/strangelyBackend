@@ -13,11 +13,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi import APIRouter, WebSocket,WebSocketDisconnect
 from ws.chat import WebSocketManager,handle_websocket_messages
 from starlette.middleware.sessions import SessionMiddleware
+from env_secret import SECRET_KEY
 app = FastAPI()
-from dotenv import load_dotenv
-import os
-load_dotenv()
-SECRET_KEY = os.getenv("SECRET_KEY")
+
 
 app.add_middleware(
     CORSMiddleware,
@@ -102,20 +100,20 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
 #sql_admin
 
 
-admin = Admin(
-    app,
-    sync_engine,
-    authentication_backend=AdminAuth(secret_key=SECRET_KEY),
-    title="Strangely",
-)
-admin.add_view(UserAdmin)
+# admin = Admin(
+#     app,
+#     sync_engine,
+#     authentication_backend=AdminAuth(secret_key=SECRET_KEY),
+#     title="Strangely",
+# )
+# admin.add_view(UserAdmin)
 
 
-@app.websocket("/ws/chats")
-async def websocket_connect(websocket: WebSocket):
+# @app.websocket("/ws/chats")
+# async def websocket_connect(websocket: WebSocket):
  
-    await websocket.accept()
-    await handle_websocket_messages(websocket)
+#     await websocket.accept()
+#     await handle_websocket_messages(websocket)
     
 
 

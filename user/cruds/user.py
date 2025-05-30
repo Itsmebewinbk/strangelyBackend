@@ -1,16 +1,16 @@
 from sqlalchemy.orm import Session
 from sqlalchemy.ext.asyncio import AsyncSession
-from user.models import User
-from user.schemas import UserCreate
-from fastapi import HTTPException, Request, Form
+from user.models import User,ActiveToken
+from user.utils import create_access_token
+from user.schemas import UserCreate,Token
+
 from response import ErrorResponse, SuccessResponse
 from sqlalchemy.future import select
 from sqlalchemy import func
 
-from fastapi.responses import RedirectResponse
-from fastapi.templating import Jinja2Templates
 
-templates = Jinja2Templates(directory="templates")
+# templates = Jinja2Templates(directory="templates")
+# jwt
 
 
 def get_user_by_email(db: Session, email: str):
@@ -94,20 +94,49 @@ def delete_user_crud(db: Session, id: int):
     return SuccessResponse(message="User deleted Successfully")
 
 
-async def login_user(
-    db: Session, request: Request, email: str = Form(...), password: str = Form(...)
-):
+# async def login_user(
+#     db: Session, request: Request, email: str = Form(...), password: str = Form(...)
+# ):
 
-    user = db.query(User).filter(User.email == email).first()
-    if not user or not User.verify_password(password, user.password):
-        return templates.TemplateResponse(
-            "login.html", {"request": request, "error": "Invalid credentials"}
-        )
+#     user = db.query(User).filter(User.email == email).first()
+#     if not user or not User.verify_password(password, user.password):
+#         return templates.TemplateResponse(
+#             "login.html", {"request": request, "error": "Invalid credentials"}
+#         )
 
-    request.session["user"] = {
-        "id": user.id,
-        "email": user.email,
-        "is_superuser": user.is_superuser,
-    }
-    return RedirectResponse(url="/admin", status_code=302)
+#     request.session["user"] = {
+#         "id": user.id,
+#         "email": user.email,
+#         "is_superuser": user.is_superuser,
+#     }
+#     return RedirectResponse(url="/admin", status_code=302)
 
+
+async def save_anonymous_user(db: Session, firebase_token: str):
+    # user = db.query(User).filter(User.firebase_token==firebase_token).first()
+    result = await db.execute(select(User).where(User.firebase_token == firebase_token))
+    user = result.scalars().first()
+    if not user:
+        try:
+            password = "Pradeep@123"
+            email ="anonymous@gmail.com"
+            user = User(firebase_token=firebase_token,password=password,email=email)
+            db.add(user)
+            await db.commit()
+            await db.refresh(user)
+        except Exception as e:
+            await db.rollback()
+            return ErrorResponse(status_code=500, message="Internal server error")
+        
+    if user:
+        try : 
+            access_token = await create_access_token(data={"sub": str(user.id)})
+            active_token = ActiveToken(user_id=user.id, jti=access_token)
+            db.add(active_token)
+            await db.commit()
+            await db.refresh(active_token)
+        except Exception as e:
+            await db.rollback()
+            return ErrorResponse(status_code=500, message="Internal server error")
+
+    return Token(access_token=access_token, token_type="Bearer")

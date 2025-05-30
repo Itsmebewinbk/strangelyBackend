@@ -20,3 +20,12 @@ class GetUser(BaseModel):
     last_name: str
     email: EmailStr
     profile_pic: HttpUrl | None = None
+
+
+class Token(BaseModel):
+    access_token: str
+    token_type: str
+
+
+class FireBaseToken(BaseModel):
+    firebase_token : str

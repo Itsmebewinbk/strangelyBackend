@@ -5,17 +5,12 @@ from user.cruds import (
     create_user,
     delete_user_crud,
     AsyncSession,
-    Request,
-    RedirectResponse,
-    templates,
-    
-    User,
-    Form
-
+    save_anonymous_user,
 )
 from db import get_sync_db, get_async_db
-from user.schemas import UserCreate, GetUser
+from user.schemas import UserCreate, GetUser, FireBaseToken
 from response import ErrorResponse
+from fastapi import Request
 
 router = APIRouter()
 
@@ -51,43 +46,12 @@ def delete_user(id: int, db: Session = Depends(get_sync_db)):
     return delete_user_crud(db, id)
 
 
-@router.get("/login")
-def login_page(request: Request):
-    return templates.TemplateResponse("login.html", {"request": request})
+@router.post("/login/")
+async def login(payload: FireBaseToken, db: AsyncSession = Depends(get_async_db)):
+    # request:Request
+    # body = await request.json()
+    # firebase_token = body.get("firebase_token")
 
-@router.post("/login")
-async def login_user(
-    request: Request,
-    email: str = Form(...),
-    password: str = Form(...),
-    db: Session = Depends(get_sync_db),
-):
-
-    user = db.query(User).filter(User.email == email).first()
-    if not user or not User.verify_password(password, user.password):
-        return templates.TemplateResponse(
-            "login.html", {"request": request, "error": "Invalid credentials"}
-        )
-
-    request.session["user"] = {
-        "id": user.id,
-        "email": user.email,
-        "is_superuser": user.is_superuser,
-    }
-    return RedirectResponse(url="/admin", status_code=302)
-
-@router.get("/logout")
-
-async def logout_user(request: Request):
-    request.session.clear()
-    return RedirectResponse(url="/login", status_code=302)
-
-
-@router.get("/admin/dashboard")
-def admin_dashboard(request: Request):
-    user = request.session.get("user")
-    if not user or not user.get("is_superuser"):
-        return RedirectResponse("/login")
-    return templates.TemplateResponse(
-        "dashboard.html", {"request": request, "user": user}
-    )
+    if not payload.firebase_token:
+        return ErrorResponse(status_code=400, message="firebase_token is required")
+    return await save_anonymous_user(db, payload.firebase_token)

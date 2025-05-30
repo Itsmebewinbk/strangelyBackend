@@ -1,4 +1,4 @@
-from sqlalchemy import Integer, String, DateTime, ForeignKey, Enum, Boolean
+from sqlalchemy import Integer, String, DateTime, ForeignKey, Enum, Boolean, text
 from sqlalchemy.orm import (
     Mapped,
     mapped_column,
@@ -7,7 +7,7 @@ from sqlalchemy.orm import (
 from datetime import datetime
 from passlib.context import CryptContext
 from db import Base
-import enum
+import enum, jwt
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -21,6 +21,7 @@ class TimeStampModel(Base):
     updated_at: Mapped[datetime] = mapped_column(
         DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
     )
+
 
 class AuthMethodEnum(str, enum.Enum):
     GOOGLE = "google"
@@ -52,8 +53,9 @@ class User(TimeStampModel):
         Enum(AuthMethodEnum), nullable=True
     )
     device_type: Mapped[str] = mapped_column(Enum(DeviceTypeEnum), nullable=True)
-    is_online: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
-
+    is_superuser: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, server_default=text("0")  
+    )
     gender: Mapped[GenderEnum] = mapped_column(
         Enum(GenderEnum), default=GenderEnum.OTHER
     )
@@ -63,8 +65,12 @@ class User(TimeStampModel):
         index=True,
         nullable=False,
     )
-    is_superuser : Mapped[bool] = mapped_column(Boolean,default=False)
-    is_registered : Mapped[bool] = mapped_column(Boolean,default=False)
+    is_superuser: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, server_default=text("0")
+    )
+    is_registered: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, server_default=text("0") 
+    )
     password: Mapped[str] = mapped_column(String, nullable=False)
 
     # One-to-One relationship
@@ -79,7 +85,6 @@ class User(TimeStampModel):
     addresses: Mapped[list["Address"]] = relationship(
         "Address", back_populates="user", passive_deletes=True
     )
-    
 
     # Many-to-Many relationship
     roles: Mapped[list["Role"]] = relationship(
@@ -92,8 +97,6 @@ class User(TimeStampModel):
     # members: Mapped[list["Member"]] = relationship(
     #     "Member", back_populates="user", cascade="all, delete-orphan"
     # )
-
-
 
     def set_password(self, password: str):
         if password:
@@ -141,7 +144,7 @@ class ActiveToken(TimeStampModel):
     )
     jti: Mapped[str] = mapped_column(
         String,
-        nullable=False,  # Assuming the token identifier should not be null
+        nullable=False,  #
         unique=True,
     )
 
@@ -156,7 +159,7 @@ class Address(TimeStampModel):
         autoincrement=True,
     )
     road_name: Mapped[str] = mapped_column(String(80), nullable=False)
-  
+
     city: Mapped[str] = mapped_column(String(80), nullable=False)
     user_id: Mapped[int] = mapped_column(
         Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False
