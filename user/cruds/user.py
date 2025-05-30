@@ -8,7 +8,7 @@ from response import ErrorResponse, SuccessResponse
 from sqlalchemy.future import select
 from sqlalchemy import func
 import uuid
-from query import update_or_create_async
+from helper import update_or_create_async
 
 # templates = Jinja2Templates(directory="templates")
 # jwt
@@ -115,36 +115,33 @@ def delete_user_crud(db: Session, id: int):
 
 async def save_anonymous_user(db: Session, firebase_token: str):
     # user = db.query(User).filter(User.firebase_token==firebase_token).first()
-    result = await db.execute(select(User).where(User.firebase_token == firebase_token))
-    user = result.scalars().first()
-    if not user:
-        try:
-            password = uuid.uuid4()
-            email ="anonymous@gmail.com"
-            user = User(firebase_token=firebase_token,password=password,email=email)
+    try:
+        result = await db.execute(select(User).where(User.firebase_token == firebase_token))
+        user = result.scalars().first()
+
+        if not user:
+            password = str(uuid.uuid4()) 
+            email = "anonymous@gmail.com"
+            user = User(firebase_token=firebase_token, password=password, email=email)
             db.add(user)
             await db.commit()
             await db.refresh(user)
-        except Exception as e:
-            await db.rollback()
-            return ErrorResponse(status_code=500, message="Internal server error")
-        
-    if user:
-        try : 
-            access_token = await create_access_token(data={"sub": str(user.id)})
-            token, created = await update_or_create_async(
-                    db,
-                    ActiveToken,
-                    defaults={
-                        "jti": await create_access_token(data={"sub": str(user.id)}),
-                        "updated_at": datetime.utcnow()
-                    },
-                    user_id=user.id
-                )
-           
-           
-        except Exception as e:
-            await db.rollback()
-            return ErrorResponse(status_code=500, message="Internal server error")
 
-    return Token(access_token=access_token, token_type="Bearer")
+        access_token = await create_access_token(data={"sub": str(user.id)})
+
+        token, created = await update_or_create_async(
+            db,
+            ActiveToken,
+            defaults={
+                "jti": access_token,
+                "updated_at": datetime.utcnow()
+            },
+            user_id=user.id
+        )
+
+        return Token(access_token=access_token, token_type="Bearer")
+
+    except Exception as e:
+        await db.rollback()
+        print(f"Error in save_anonymous_user: {e}")
+        return ErrorResponse(status_code=500, message="Internal server error")
