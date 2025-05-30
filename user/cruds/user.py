@@ -3,11 +3,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from user.models import User,ActiveToken
 from user.utils import create_access_token
 from user.schemas import UserCreate,Token
-
+from datetime import datetime
 from response import ErrorResponse, SuccessResponse
 from sqlalchemy.future import select
 from sqlalchemy import func
-
+import uuid
+from query import update_or_create_async
 
 # templates = Jinja2Templates(directory="templates")
 # jwt
@@ -118,7 +119,7 @@ async def save_anonymous_user(db: Session, firebase_token: str):
     user = result.scalars().first()
     if not user:
         try:
-            password = "Pradeep@123"
+            password = uuid.uuid4()
             email ="anonymous@gmail.com"
             user = User(firebase_token=firebase_token,password=password,email=email)
             db.add(user)
@@ -131,10 +132,17 @@ async def save_anonymous_user(db: Session, firebase_token: str):
     if user:
         try : 
             access_token = await create_access_token(data={"sub": str(user.id)})
-            active_token = ActiveToken(user_id=user.id, jti=access_token)
-            db.add(active_token)
-            await db.commit()
-            await db.refresh(active_token)
+            token, created = await update_or_create_async(
+                    db,
+                    ActiveToken,
+                    defaults={
+                        "jti": await create_access_token(data={"sub": str(user.id)}),
+                        "updated_at": datetime.utcnow()
+                    },
+                    user_id=user.id
+                )
+           
+           
         except Exception as e:
             await db.rollback()
             return ErrorResponse(status_code=500, message="Internal server error")
