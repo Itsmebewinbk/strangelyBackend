@@ -5,31 +5,28 @@ from redis.asyncio import Redis
 from typing import Dict
 from db.redis import RedisPubSubManager
 import json
+from fastapi import WebSocket, WebSocketDisconnect
+
 
 
 class WebSocketManager:
     def __init__(self):
-        """
-        Manages WebSocket connections across distributed servers using Redis.
-        """
-        self.local_sockets: Dict[str, WebSocket] = {}  # sender_id → WebSocket instance
+      
+        self.local_sockets: Dict[str, WebSocket] = {} 
         self.pubsub_client = RedisPubSubManager()
-        self.redis = Redis()  # connect to your Redis host here
+        self.redis = Redis()
         self.subscribed_rooms: set[str] = set()
 
     async def add_user_to_room(
         self, room_id: str, sender_id: str, websocket: WebSocket
     ) -> None:
-        """
-        Adds a WebSocket to a room using Redis for distributed tracking.
-        """
-        # await websocket.accept()
+        
         sender_id = str(sender_id)
         self.local_sockets[sender_id] = websocket
         print("local_sockets", self.local_sockets)
         print("sender_id", sender_id)
 
-        # Store in Redis
+     
         await self.redis.sadd(f"room:{room_id}", sender_id)
         await self.redis.set(f"sender_id:{sender_id}", room_id)
 
@@ -39,21 +36,14 @@ class WebSocketManager:
             asyncio.create_task(self._pubsub_data_reader(pubsub_subscriber, room_id))
             self.subscribed_rooms.add(room_id)
 
-        # Attach socket_id to websocket object for cleanup
+       
         websocket.sender_id = sender_id
 
     async def broadcast_to_room(self, room_id: str, message: str) -> None:
-        """
-        Publishes a message to Redis pubsub for a room.
-
-        """
-        print(f"[BROADCAST] room_id={room_id}, message={message}")
         await self.pubsub_client._publish(room_id, message)
 
     async def remove_user_from_room(self, room_id: str, websocket: WebSocket) -> None:
-        """
-        Removes a WebSocket from a room and cleans up Redis state.
-        """
+      
         sender_id = getattr(websocket, "sender_id", None)
         if sender_id:
             self.local_sockets.pop(sender_id, None)
@@ -67,10 +57,8 @@ class WebSocketManager:
             self.subscribed_rooms.discard(room_id)
 
     async def _pubsub_data_reader(self, pubsub_subscriber, room_id: str):
-        """
-        Listens for Redis pubsub messages and sends them to all connected WebSockets.
-        """
-        print(f"[READER STARTED] for room: {room_id}")
+      
+    
         while True:
             try:
                 message = await pubsub_subscriber.get_message(
@@ -78,7 +66,6 @@ class WebSocketManager:
                 )
                 if message:
                     raw_data = message["data"].decode("utf-8")
-                    print(f"[RECEIVED] room={room_id}, data={raw_data}")
 
                     try:
                         data = json.loads(raw_data)
@@ -139,3 +126,35 @@ class WebSocketManager:
     #         except Exception as e:
     #             print(f"Error reading from stream: {e}")
     #             break
+
+ws_manager =    WebSocketManager()   
+async def handle_websocket_messages(websocket: WebSocket):
+        room_id = None
+
+        try:
+            while True:
+                data = await websocket.receive_json()
+                command = data.get("command")
+
+                if command == "join_room":
+                    room_id = data.get("room_id")
+                    sender_id = data.get("sender_id")
+                    if room_id is None:
+                        await websocket.send_json({"error": "room_id required"})
+                        continue
+                    await ws_manager.add_user_to_room(room_id,sender_id, websocket)
+
+                elif command == "send_message":
+                    if room_id is None:
+                        await websocket.send_json({"error": "You must join a room first"})
+                        continue
+                    message = data.get("message")
+                    if message:
+                        await ws_manager.broadcast_to_room(room_id, data)
+
+                else:
+                    await websocket.send_json({"error": "Invalid command"})
+
+        except WebSocketDisconnect:
+            print(f"WebSocket disconnected from room {room_id}")
+            await ws_manager.remove_user_from_room(room_id, websocket)

@@ -11,15 +11,13 @@ from fastapi.exceptions import RequestValidationError
 from response import ErrorResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi import APIRouter, WebSocket,WebSocketDisconnect
-from ws.chat import WebSocketManager
+from ws.chat import WebSocketManager,handle_websocket_messages
 from starlette.middleware.sessions import SessionMiddleware
-
-
-import logging
-
-logger = logging.getLogger(__name__)
 app = FastAPI()
-
+from dotenv import load_dotenv
+import os
+load_dotenv()
+SECRET_KEY = os.getenv("SECRET_KEY")
 
 app.add_middleware(
     CORSMiddleware,
@@ -28,6 +26,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.add_middleware(SessionMiddleware, secret_key=SECRET_KEY)
 
 # @app.middleware("http")
 # async def catch_server_errors(request: Request, call_next):
@@ -60,9 +60,11 @@ app.add_middleware(
 #         await send_error_email(subject, body)
 #     return response
 
-SECRET_KEY = "QDNWEJRNGERTIY3MRYT"
-app.add_middleware(SessionMiddleware, secret_key=SECRET_KEY)
 
+
+
+
+#exception_handling
 
 @app.exception_handler(404)
 async def not_found_handler(request: Request, exc: HTTPException):
@@ -97,6 +99,8 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
 
 
 
+#sql_admin
+
 
 admin = Admin(
     app,
@@ -106,49 +110,15 @@ admin = Admin(
 )
 admin.add_view(UserAdmin)
 
-# api/v1/
-app.include_router(urls_router, prefix="/api/v1/users")
-app.include_router(chat_router, prefix="/api/v1/chats")
-
-
-@app.get("/")
-async def read_root():
-    return {"message": "Hello, FastAPI!"}
-
-
-ws_manager = WebSocketManager()
 
 @app.websocket("/ws/chats")
 async def websocket_connect(websocket: WebSocket):
-    print(8222222222222222222222222222233333)
+ 
     await websocket.accept()
-    room_id = None
+    await handle_websocket_messages(websocket)
+    
 
-    try:
-        while True:
-            data = await websocket.receive_json()
-            command = data.get("command")
 
-            if command == "join_room":
-                room_id = data.get("room_id")
-                sender_id = data.get("sender_id")
-                if room_id is None:
-                    await websocket.send_json({"error": "room_id required"})
-                    continue
-                print(999999999999999999999999999999)
-                await ws_manager.add_user_to_room(room_id,sender_id, websocket)
-
-            elif command == "send_message":
-                if room_id is None:
-                    await websocket.send_json({"error": "You must join a room first"})
-                    continue
-                message = data.get("message")
-                if message:
-                    await ws_manager.broadcast_to_room(room_id, data)
-
-            else:
-                await websocket.send_json({"error": "Invalid command"})
-
-    except WebSocketDisconnect:
-        print(f"WebSocket disconnected from room {room_id}")
-        await ws_manager.remove_user_from_room(room_id, websocket)
+# api/v1/
+app.include_router(urls_router, prefix="/api/v1/users")
+app.include_router(chat_router, prefix="/api/v1/chats")
