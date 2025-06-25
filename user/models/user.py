@@ -134,7 +134,7 @@ class ActiveToken(TimeStampModel):
     )
     jti: Mapped[str] = mapped_column(
         String,
-        nullable=False,  # Assuming the token identifier should not be null
+        nullable=False,
         unique=True,
     )
 
