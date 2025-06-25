@@ -8,11 +8,10 @@ import json
 from fastapi import WebSocket, WebSocketDisconnect
 
 
-
 class WebSocketManager:
     def __init__(self):
-      
-        self.local_sockets: Dict[str, WebSocket] = {} 
+
+        self.local_sockets: Dict[str, WebSocket] = {}
         self.pubsub_client = RedisPubSubManager()
         self.redis = Redis()
         self.subscribed_rooms: set[str] = set()
@@ -20,13 +19,12 @@ class WebSocketManager:
     async def add_user_to_room(
         self, room_id: str, sender_id: str, websocket: WebSocket
     ) -> None:
-        
+
         sender_id = str(sender_id)
         self.local_sockets[sender_id] = websocket
         print("local_sockets", self.local_sockets)
         print("sender_id", sender_id)
 
-     
         await self.redis.sadd(f"room:{room_id}", sender_id)
         await self.redis.set(f"sender_id:{sender_id}", room_id)
 
@@ -36,14 +34,13 @@ class WebSocketManager:
             asyncio.create_task(self._pubsub_data_reader(pubsub_subscriber, room_id))
             self.subscribed_rooms.add(room_id)
 
-       
         websocket.sender_id = sender_id
 
     async def broadcast_to_room(self, room_id: str, message: str) -> None:
         await self.pubsub_client._publish(room_id, message)
 
     async def remove_user_from_room(self, room_id: str, websocket: WebSocket) -> None:
-      
+
         sender_id = getattr(websocket, "sender_id", None)
         if sender_id:
             self.local_sockets.pop(sender_id, None)
@@ -57,8 +54,7 @@ class WebSocketManager:
             self.subscribed_rooms.discard(room_id)
 
     async def _pubsub_data_reader(self, pubsub_subscriber, room_id: str):
-      
-    
+
         while True:
             try:
                 message = await pubsub_subscriber.get_message(
@@ -77,13 +73,13 @@ class WebSocketManager:
                     print(f"[DELIVERING TO] {sender_ids}")
 
                     for sender_id in sender_ids:
-                       
+
                         sender_id_str = sender_id.decode()
                         if sender_id_str == str(data.get("sender_id")):
                             continue
                         websocket = self.local_sockets.get(sender_id_str)
-                        print("sender_id_str",sender_id_str)
-                        print("websocket",websocket)
+                        print("sender_id_str", sender_id_str)
+                        print("websocket", websocket)
 
                         if websocket:
                             try:
@@ -127,34 +123,52 @@ class WebSocketManager:
     #             print(f"Error reading from stream: {e}")
     #             break
 
-ws_manager =    WebSocketManager()   
+
+ws_manager = WebSocketManager()
+
+
 async def handle_websocket_messages(websocket: WebSocket):
-        room_id = None
+    room_id = None
 
-        try:
-            while True:
-                data = await websocket.receive_json()
-                command = data.get("command")
+    try:
+        while True:
+            data = await websocket.receive_json()
+            command = data.get("command")
 
-                if command == "join_room":
-                    room_id = data.get("room_id")
-                    sender_id = data.get("sender_id")
-                    if room_id is None:
-                        await websocket.send_json({"error": "room_id required"})
-                        continue
-                    await ws_manager.add_user_to_room(room_id,sender_id, websocket)
+            if command == "join_room":
+                room_id = data.get("room_id")
+                sender_id = data.get("sender_id")
+                if room_id is None:
+                    await websocket.send_json({"error": "room_id required"})
+                    continue
+                await ws_manager.add_user_to_room(room_id, sender_id, websocket)
 
-                elif command == "send_message":
-                    if room_id is None:
-                        await websocket.send_json({"error": "You must join a room first"})
-                        continue
-                    message = data.get("message")
-                    if message:
-                        await ws_manager.broadcast_to_room(room_id, data)
+            elif command == "send_message":
+                if room_id is None:
+                    await websocket.send_json({"error": "You must join a room first"})
+                    continue
+                message = data.get("message")
+                if message:
+                    await ws_manager.broadcast_to_room(room_id, data)
 
-                else:
-                    await websocket.send_json({"error": "Invalid command"})
+            else:
+                await websocket.send_json({"error": "Invalid command"})
 
-        except WebSocketDisconnect:
-            print(f"WebSocket disconnected from room {room_id}")
-            await ws_manager.remove_user_from_room(room_id, websocket)
+    except WebSocketDisconnect:
+        print(f"WebSocket disconnected from room {room_id}")
+        await ws_manager.remove_user_from_room(room_id, websocket)
+
+
+{
+  "command": "join_room",
+  "room_id": "room_123",
+  "sender_id": "user_abc"
+}
+
+{
+  "command": "send_message",
+  "room_id": "room_123",     
+  "sender_id": "user_abc",    
+  "message": "Hello, everyone!"
+}
+

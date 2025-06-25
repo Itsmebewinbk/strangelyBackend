@@ -1,4 +1,6 @@
 fastapi==0.115.11
+uvicorn[standard]
+
 alembic==1.15.1
 SQLAlchemy==2.0.39
 sqladmin==0.20.1
@@ -12,5 +14,5 @@ motor==3.7.0
 aioredis==2.0.1
 redis==5.2.1
 itsdangerous==2.2.0
-python-dotenv=1.1.0
+python-dotenv==1.1.0
 pyjwt==2.10.1

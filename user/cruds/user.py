@@ -114,10 +114,25 @@ def delete_user_crud(db: Session, id: int):
 
 
 async def save_anonymous_user(db: Session, firebase_token: str):
+    """
+    Asynchronously saves or retrieves an anonymous user based on the provided Firebase token.
+    If a user with the given Firebase token does not exist, creates a new anonymous user with a generated password and a default email.
+    Generates an access token for the user and updates or creates an active token record in the database.
+    Args:
+        db (Session): The asynchronous database session.
+        firebase_token (str): The Firebase token identifying the anonymous user.
+    Returns:
+        Token: An object containing the access token and token type if successful.
+        ErrorResponse: An error response object with status code and message if an exception occurs.
+    Raises:
+        Handles ValueError, TypeError, and RuntimeError by rolling back the transaction and returning an error response.
+    """
+    
     # user = db.query(User).filter(User.firebase_token==firebase_token).first()
     try:
         result = await db.execute(select(User).where(User.firebase_token == firebase_token))
         user = result.scalars().first()
+       
 
         if not user:
             password = str(uuid.uuid4()) 
@@ -129,7 +144,7 @@ async def save_anonymous_user(db: Session, firebase_token: str):
 
         access_token = await create_access_token(data={"sub": str(user.id)})
 
-        token, created = await update_or_create_async(
+        await update_or_create_async(
             db,
             ActiveToken,
             defaults={
@@ -141,7 +156,7 @@ async def save_anonymous_user(db: Session, firebase_token: str):
 
         return Token(access_token=access_token, token_type="Bearer")
 
-    except Exception as e:
+    except (ValueError, TypeError, RuntimeError) as e:
         await db.rollback()
         print(f"Error in save_anonymous_user: {e}")
         return ErrorResponse(status_code=500, message="Internal server error")

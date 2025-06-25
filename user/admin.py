@@ -1,6 +1,6 @@
 # admin.py
 from sqladmin import ModelView
-from user.models.user import User
+from user.models.user import User,ActiveToken
 
 from fastapi import FastAPI
 from datetime import datetime, timedelta
@@ -79,16 +79,19 @@ class AdminAuth(AuthenticationBackend):
 
 
 class UserAdmin(ModelView, model=User):
-  
     column_list = [User.id, User.first_name, User.last_name, User.email]
-    
-   
     column_filters = [User.first_name, User.email]
-    
-    
     column_searchable_list = [User.first_name, User.last_name, User.email]
-    
-   
+    column_labels = {
+        User.id: "ID",
+        User.first_name: "First Name",
+        User.last_name: "Last Name",
+        User.email: "Email Address"
+    }
+class ActiveTokenAdmin(ModelView, model=User):
+    column_list = [ActiveToken.id, ActiveToken.user_id, User.last_name, User.email]
+    column_filters = [User.first_name, User.email]
+    column_searchable_list = [User.first_name, User.last_name, User.email]
     column_labels = {
         User.id: "ID",
         User.first_name: "First Name",

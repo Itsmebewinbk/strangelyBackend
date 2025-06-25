@@ -61,7 +61,7 @@ class User(TimeStampModel):
     )
     email: Mapped[str] = mapped_column(
         String,
-        unique=True,
+        
         index=True,
         nullable=False,
     )

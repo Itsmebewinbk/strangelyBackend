@@ -2,7 +2,6 @@
 from fastapi import FastAPI, Request, HTTPException
 from user.urls import router as urls_router
 from chat.urls import router as chat_router
-from ws.urls import router as ws_router
 from sqladmin import Admin
 from user.admin import UserAdmin, AdminAuth
 from db import sync_engine, redis_client

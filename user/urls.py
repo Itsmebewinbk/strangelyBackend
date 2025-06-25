@@ -48,10 +48,19 @@ def delete_user(id: int, db: Session = Depends(get_sync_db)):
 
 @router.post("/login/")
 async def login(payload: FireBaseToken, db: AsyncSession = Depends(get_async_db)):
+    """
+    Handles user login using a Firebase token. Validates the token and saves the anonymous user to the database.
+    Args:
+        payload (FireBaseToken): The payload containing the Firebase token.
+        db (AsyncSession): The async database session.
+    Returns:
+        ErrorResponse if the token is missing, otherwise the result of saving the user.
+    """
+
     # request:Request
     # body = await request.json()
     # firebase_token = body.get("firebase_token")
-
+    print(23)
     if not payload.firebase_token:
         return ErrorResponse(status_code=400, message="firebase_token is required")
     return await save_anonymous_user(db, payload.firebase_token)
